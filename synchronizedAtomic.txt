@@ -1,0 +1,170 @@
+package learning;
+
+import java.io.*;
+
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		String input1directory = "InputFiles/a.txt";
+		String input2directory = "InputFiles/b.txt";
+		String input3directory = "InputFiles/c.txt";
+		SumWrapper sumWrapper = new SumWrapper(0);
+		Thread t1 = new Thread(new ThreadFileWithSumSynchronized(input1directory, sumWrapper));
+		Thread t2 = new Thread(new ThreadFileWithSumSynchronized(input2directory, sumWrapper));
+		Thread t3 = new Thread(new ThreadFileWithSumSynchronized(input3directory, sumWrapper));
+		//Thread t1 = new Thread(new ThreadFileWithSumAtomic(input1directory));
+		//Thread t2 = new Thread(new ThreadFileWithSumAtomic(input2directory));
+		//Thread t3 = new Thread(new ThreadFileWithSumAtomic(input3directory));
+		
+		
+		
+		/*ExecutorService executor = Executors.newFixedThreadPool(3);
+		List<Callable<Double>> tasks = List.of(new ThreadWithSumCallable(input1directory),
+				new ThreadWithSumCallable(input2directory),
+				new ThreadWithSumCallable(input3directory));
+		
+		Future<?> f1 = executor.submit(new ThreadWithSum(input1directory));
+		Future<?> f2 = executor.submit(new ThreadWithSum(input2directory));
+		Future<?> f3 = executor.submit(new ThreadWithSum(input3directory));*/
+		long time1;
+		
+		t1.start(); t2.start(); t3.start();
+		//executor.invokeAll(tasks);
+		time1 = System.currentTimeMillis();
+        try {
+        	t1.join(); t2.join(); t3.join();
+        	//f1.get(); f2.get(); f3.get()
+        	long time2 = System.currentTimeMillis() - time1;
+        	System.out.println(time2);
+        	//System.out.println(ThreadFileWithSumAtomic.getSum());
+        	
+        	System.out.println(sumWrapper.getSum());
+        	
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }
+	}
+}
+
+class SumWrapper{
+	private double sum;
+	
+	SumWrapper(double sum){
+		this.sum = sum;
+	}
+	
+	synchronized void add(double number){
+		this.sum += number;
+	}
+	
+	double getSum() {
+		return this.sum;
+	}
+	
+	public String toString() {
+		return "" + this.sum;
+	}
+}
+
+class ThreadFileWithSumSynchronized implements Runnable {
+	final String inputDirectory;
+	private SumWrapper sumWrapper;
+	
+	ThreadFileWithSumSynchronized(String inputDirectory, SumWrapper sumWrapper){
+		this.inputDirectory = inputDirectory;
+		this.sumWrapper = sumWrapper;
+	}
+	
+	SumWrapper getSum() {
+		return this.sumWrapper;
+	}
+	
+	String getInputDirectory(){
+		return this.inputDirectory;
+	}
+	
+	public void run(){
+		try(BufferedReader reader = new BufferedReader(new FileReader(inputDirectory))){
+			Pattern pattern = Pattern.compile("-?\\d+(?:[.,]\\d+)?");
+			Matcher matcher;
+			String line;
+			while((line = reader.readLine()) != null) {
+				 matcher = pattern.matcher(line);
+				 while (matcher.find()) {
+					 this.sumWrapper.add(Double.parseDouble(matcher.group().replace(',', '.')));
+				 }
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+class ThreadFileWithSumAtomic implements Runnable {
+	final String inputDirectory;
+	private DoubleAdder sum;
+	
+	ThreadFileWithSumAtomic(String inputDirectory, DoubleAdder sum){
+		this.inputDirectory = inputDirectory;
+		this.sum = sum;
+	}
+	
+	DoubleAdder getSum() {
+		return this.sum;
+	}
+	
+	String getInputDirectory(){
+		return this.inputDirectory;
+	}
+	
+	public void run(){
+		try(BufferedReader reader = new BufferedReader(new FileReader(inputDirectory))){
+			Pattern pattern = Pattern.compile("-?\\d+(?:[.,]\\d+)?");
+			Matcher matcher;
+			String line;
+			while((line = reader.readLine()) != null) {
+				 matcher = pattern.matcher(line);
+				 while (matcher.find()) {
+					 this.sum.add(Double.parseDouble(matcher.group().replace(',', '.')));
+				 }
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+/*class ThreadWithSumCallable implements Callable<Double> {
+	final String inputDirectory;
+	private SumWrapper sumWrapper;
+	
+	ThreadWithSumCallable(String inputDirectory, SumWrapper sumWrapper){
+		this.inputDirectory = inputDirectory;
+		this.sumWrapper = sumWrapper;
+	}
+	
+	SumWrapper getSum() {
+		return this.sumWrapper;
+	}
+	
+	String getInputDirectory(){
+		return this.inputDirectory;
+	}
+	
+	public Double call(){
+		try(BufferedReader reader = new BufferedReader(new FileReader(inputDirectory))){
+			Pattern pattern = Pattern.compile("-?\\d+(?:[.,]\\d+)?");
+			Matcher matcher;
+			String line;
+			while((line = reader.readLine()) != null) {
+				 matcher = pattern.matcher(line);
+				 while (matcher.find()) {
+					 this.sumWrapper.add(Double.parseDouble(matcher.group().replace(',', '.')));
+				 }
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		return Double.NaN;
+	}
+}*/

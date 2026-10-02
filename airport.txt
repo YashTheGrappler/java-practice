@@ -1,0 +1,255 @@
+package learning;
+
+import java.util.*;
+import java.util.concurrent.locks.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		List<String> cities = new ArrayList<>(Arrays.asList("Galych", "Kalush", "Kolomiya", "Kosiv"));
+		List<Plane> planes = Controller.generateRandomPlanes(3, 6, cities);
+		for(Plane plane : planes) {
+			System.out.println(plane);
+		}
+		System.out.println();
+		
+		List<Bus> buses = new ArrayList<>();
+		for(int i = 0; i < 40; i++) {
+			buses.add(Controller.generateRandomBus(6, 9, cities));
+		}
+		
+		List<Thread> threads = new ArrayList<>();
+		ReentrantReadWriteLock busesRrwlock = new ReentrantReadWriteLock(true);
+	    for (Plane plane : planes) {
+	        threads.add(new Thread(new ThreadForTransportPassengers(plane, buses, busesRrwlock)));
+	    }
+	    
+	    long time1;
+		long time2;
+		
+		for (Thread t : threads) {
+	        t.start();
+	    }
+		time1 = System.currentTimeMillis();
+		for (Thread t : threads) {
+	        try {
+	            t.join();
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+		}
+		
+		time2 = System.currentTimeMillis() - time1;
+		for(String log : ThreadForTransportPassengers.logs) {
+			System.out.println(log);
+		}
+		System.out.println();
+		
+		System.out.println(time2 + " ms");
+		System.out.println();
+		
+		for(Plane plane : planes) {
+			System.out.println(plane);
+		}
+		System.out.println();
+		
+		for(Bus bus : buses) {
+			System.out.println(bus + " incomplete bus left airport");
+		}
+	}
+}
+
+class ThreadForTransportPassengers implements Runnable{
+	private Plane plane;
+	private List<Bus> buses;
+	static List<String> logs = new ArrayList<>();
+	ReentrantReadWriteLock busesRrwlock;
+	
+	ThreadForTransportPassengers(Plane plane, List<Bus> buses, ReentrantReadWriteLock busesRrwlock){
+		this.plane = plane;
+		this.buses = buses;
+		this.busesRrwlock = busesRrwlock;
+	}
+	
+	public void run() {
+		List<Family> families = this.plane.getFamilies();
+		Family family;
+		Bus bus;
+		Iterator<Family> familiesIt = families.iterator();
+		Iterator<Bus> busesIt;
+		ReentrantReadWriteLock.ReadLock readLock = this.busesRrwlock.readLock();
+		ReentrantReadWriteLock.WriteLock writeLock = this.busesRrwlock.writeLock();
+		
+		outer:
+		while(familiesIt.hasNext()) {
+			family = familiesIt.next();
+			
+			readLock.lock();
+			busesIt = buses.iterator();
+			while(busesIt.hasNext()) {
+				bus = busesIt.next();
+				if(family.getTravelTo().equals(bus.getDriveTo()) && bus.tryAddPassengers(family.getCount())) {
+					familiesIt.remove();
+					readLock.unlock();
+					
+					if(bus.getRemainingSits() == 0) {
+						writeLock.lock();
+						buses.remove(bus);
+						ThreadForTransportPassengers.logs.add(bus + " full bus left airport");
+						writeLock.unlock();
+					}
+					continue outer;
+				}
+			}
+			readLock.unlock();
+			bus = Controller.generateRandomBus(6, 9, family.getTravelTo());
+			bus.tryAddPassengers(family.getCount());
+			familiesIt.remove();
+			writeLock.lock();
+			this.buses.add(bus);
+			ThreadForTransportPassengers.logs.add(bus + " new bus arrived to airport and picked up a family");
+			writeLock.unlock();
+		}
+	} 
+}
+
+class Family {
+	private final String name;
+	private final String travelTo;
+	private final int count;
+	
+	Family(String name, String travelTo, int count) {
+		this.name = name;
+		this.travelTo = travelTo;
+		this.count = count;
+	}
+	
+	public String toString() {
+		return this.name + " " + this.travelTo + " " + this.count;
+	}
+	
+	String getName() {
+		return this.name;
+	}
+	
+	String getTravelTo() {
+		return this.travelTo;
+	}
+	
+	int getCount() {
+		return this.count;
+	}
+}
+
+class Plane {
+	private final List<Family> families;
+	private final int id;
+	
+	Plane(List<Family> families, int id) {
+		this.families = families;
+		this.id = id;
+	}
+	
+	public String toString() {
+		return this.id + " " + this.families;
+	}
+	
+	List<Family> getFamilies(){
+		return this.families;
+	}
+	
+	int getId() {
+		return this.id;
+	}
+	
+	
+}
+
+class Bus {
+	private final int passengersCount;
+	private final String driveTo;
+	private int remainingSits;
+	
+	Bus(int passengersCount, String driveTo) {
+		this.passengersCount = passengersCount;
+		this.driveTo = driveTo;
+		this.remainingSits = passengersCount;
+	}
+	
+	public String toString() {
+		return this.passengersCount + " " + this.remainingSits + " " + this.driveTo;
+	}
+	
+	synchronized boolean tryAddPassengers(int passengers) {
+		if(passengers < this.getRemainingSits() + 1) {
+			remainingSits -= passengers;
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
+	int getPassengersCount() {
+		return this.passengersCount;
+	}
+	
+	String getDriveTo() {
+		return this.driveTo;
+	}
+	
+	int getRemainingSits() {
+		return this.remainingSits;
+	}
+}
+
+class Controller {
+	private static Random random = new Random();
+	
+	static List<String> generateFamilyNames(){
+		List<String> familyNames = new ArrayList<>();
+		for (char c1 = 'a'; c1 < 'z' + 1; c1++) {
+		    for (char c2 = 'a'; c2 < 'z' + 1; c2++) {
+		        familyNames.add("" + c1 + c2);
+		    }
+		}
+		return familyNames;
+	}
+	
+	static List<Family> generateRandomFamilies(int quantityOfPeoples, List<String> familyNames, List<String> cities) {
+		List<Family> families = new ArrayList<>();
+		int totalPeoples = 0;
+		int remainingPeoples;
+		int familyCount;
+		int familyNamesListSize = familyNames.size();
+		int citiesListSize = cities.size();
+		
+		while(totalPeoples < quantityOfPeoples) {
+			remainingPeoples = quantityOfPeoples - totalPeoples;
+			familyCount = Controller.random.nextInt(1, remainingPeoples > 4? 5 : remainingPeoples + 1);
+			families.add(new Family(familyNames.get(Controller.random.nextInt(familyNamesListSize)), 
+					                cities.get(Controller.random.nextInt(citiesListSize)),
+					                familyCount));
+			totalPeoples += familyCount;
+		}
+		return families;
+	}
+	
+	static List<Plane> generateRandomPlanes(int originForRandomCountOfPlanes, int boundForRandomCountOfPlanes, List<String> cities) {
+		List<Plane> planes = new ArrayList<>();
+		int id = 1;
+		List<String> familyNames = Controller.generateFamilyNames();
+		
+		for(int i = 0; i < Controller.random.nextInt(originForRandomCountOfPlanes, boundForRandomCountOfPlanes); i++) {
+			planes.add(new Plane(Controller.generateRandomFamilies(100, familyNames, cities), id++));
+		}
+		return planes;
+	}
+	
+	static Bus generateRandomBus(int originForRandomPassengersCount, int boundForRandomPassengersCount, List<String> cities) {
+		return new Bus(Controller.random.nextInt(originForRandomPassengersCount, boundForRandomPassengersCount),
+			       cities.get(Controller.random.nextInt(cities.size())));
+	}
+	
+	static Bus generateRandomBus(int originForRandomPassengersCount, int boundForRandomPassengersCount, String city) {
+		return new Bus(Controller.random.nextInt(originForRandomPassengersCount, boundForRandomPassengersCount), city);
+	}
+}

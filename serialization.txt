@@ -1,0 +1,276 @@
+package learning;
+
+import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		String planesPath = "OutputFiles/PLANES.txt";
+		String shipesPath = "OutputFiles/SHIPS.txt";
+		
+		ArrayList<Plane> planes = new ArrayList<>(Arrays.asList(
+				new Plane(900, 2015, new Engine("Jet", 20000), "Boeing 737", 3000, new Chassis(new Wheel(1000, 80), 6)),
+				new Plane(850, 2012, new Engine("Turboprop", 15000), "Airbus A320", 2800, new Chassis(new Wheel(950, 75), 5)),
+				new Plane(1000, 2020, new Engine("Jet", 25000), "Concorde", 5000, new Chassis(new Wheel(1100, 85), 8)),
+				new Plane(700, 2010, new Engine("Jet", 18000), "Tu-154", 2700, new Chassis(new Wheel(900, 78), 6)),
+				new Plane(950, 2018, new Engine("Jet", 22000), "MC-21", 3200, new Chassis(new Wheel(1050, 82), 6))
+			));
+		Collections.sort(planes);
+
+		ArrayList<Ship> ships = new ArrayList<>(Arrays.asList(
+				new Ship(60, 2010, new Engine("Diesel", 5000), 40000, 150, new Boat(200, "Steel")),
+				new Ship(55, 2005, new Engine("Diesel", 4500), 35000, 140, new Boat(150, "Aluminum")),
+				new Ship(65, 2018, new Engine("Gas Turbine", 6000), 50000, 160, new Boat(300, "Composite")),
+				new Ship(50, 2012, new Engine("Diesel", 4000), 30000, 130, new Boat(100, "Wood")),
+				new Ship(70, 2022, new Engine("Nuclear", 8000), 55000, 170, new Boat(400, "Steel"))
+			));
+		Collections.sort(ships);
+
+		for (Plane plane : planes) {
+			System.out.println(plane);
+		}
+		System.out.println();
+		for (Ship ship : ships) {
+			System.out.println(ship);
+		}
+		System.out.println("\n-------------------------------------------------------------------------------\n");
+			
+		Controller.serializeList(planes, planesPath);
+		Controller.serializeList(ships, shipesPath);
+		
+		planes.clear();
+		ships.clear();
+		
+		Controller.deserializeList(planes, planesPath);
+		Controller.deserializeList(ships, shipesPath);
+			
+		for (Plane plane : planes) {
+			System.out.println(plane);
+		}
+		System.out.println();
+		for (Ship ship : ships) {
+			System.out.println(ship);
+		}
+	}
+}
+
+class Controller {
+	static <T extends Serializable> void serializeList(List<T> array, String path) {
+		try {
+			outputDirectoryCheck(path);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+		try (ObjectOutputStream Stream = new ObjectOutputStream(new FileOutputStream(path))) {
+			for (T object : array)
+				Stream.writeObject(object);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	static <T extends Serializable> void deserializeList(List<T> array, String path) {
+		try {
+			outputDirectoryCheck(path);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+		try (ObjectInputStream Stream = new ObjectInputStream(new FileInputStream(path))) {
+			while (true) {
+				try {
+					array.add((T)Stream.readObject());
+				} catch (EOFException e) {
+					break;
+				}
+			}
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	static void outputDirectoryCheck(String outputPath) throws IOException {
+		File outputDirectory = new File(outputPath).getParentFile();
+		if (!outputDirectory.exists()) {
+            boolean created = outputDirectory.mkdirs();
+            if (!created) {
+            	IOException e = new IOException("Unable to create directory - " + outputDirectory.getAbsolutePath());
+                throw e;
+            }
+		}
+	}         
+}
+
+class Vehicle implements  Comparable<Vehicle> {
+	int speed;
+	int yearOfProduction;
+	Engine engine;
+	
+	Vehicle(int speed, int yearOfProduction, Engine engine) {
+		this.speed = speed;
+		this.yearOfProduction = yearOfProduction;
+		this.engine = engine;
+	}
+	
+	Vehicle() {}
+	
+	public int compareTo(Vehicle v) {
+		return this.yearOfProduction - v.yearOfProduction;
+	}
+}
+
+class Plane extends Vehicle implements Serializable {
+	String model; 
+	int flyRange;
+	transient Chassis chassis;
+	
+	Plane(int speed, int yearOfProduction, Engine engine, String model, int flyRange, Chassis chassis) {
+		super(speed, yearOfProduction, engine);
+		this.model = model;
+		this.flyRange = flyRange;
+		this.chassis = chassis;
+	}
+	
+	Plane() {}
+	
+	public String toString() {
+		return super.speed + " - " + super.yearOfProduction + " | " + super.engine + " : " + this.model + " - " + this.flyRange + " : " + this.chassis ;
+	}
+	
+	private void writeObject(ObjectOutputStream oos) {
+		try {
+			oos.defaultWriteObject();
+			oos.writeInt(super.speed);
+			oos.writeInt(super.yearOfProduction);
+			oos.writeObject(super.engine.type);
+			oos.writeInt(super.engine.power); 
+			oos.writeInt(this.chassis.wheel.load);
+			oos.writeInt(this.chassis.wheel.diameter);
+			oos.writeInt(this.chassis.numberOfWheels);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void readObject(ObjectInputStream ois) {
+		try {		
+			ois.defaultReadObject();
+			super.speed = ois.readInt();
+			super.yearOfProduction = ois.readInt();
+			super.engine = new Engine((String)ois.readObject(), ois.readInt());
+			this.chassis = new Chassis(new Wheel(ois.readInt(), ois.readInt()), ois.readInt());
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+class Ship extends Vehicle implements Externalizable {
+	int waterTonnage;
+	int length;
+	Boat boat;
+	
+	Ship(int speed, int yearOfProduction, Engine engine, int waterTonnage, int length, Boat boat) {
+		super(speed, yearOfProduction, engine);
+		this.waterTonnage = waterTonnage;
+		this.length = length;
+		this.boat = boat;
+	}
+	
+	public Ship() {}
+	
+	public String toString() {
+		return super.speed + " - " + super.yearOfProduction + " | " + super.engine + " : " + this.waterTonnage + " - " + this.length + " : " + this.boat;
+	}
+	
+	public void writeExternal(ObjectOutput oo) {
+		try {
+			oo.writeInt(waterTonnage);	
+			oo.writeInt(length);
+			oo.writeInt(super.speed);
+			oo.writeInt(super.yearOfProduction);
+			oo.writeObject(super.engine.type);
+			oo.writeInt(super.engine.power);
+			oo.writeInt(boat.numberOfPassagers);
+			oo.writeObject(boat.material);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void readExternal(ObjectInput oi) {
+		try {
+			this.waterTonnage = oi.readInt();
+			this.length = oi.readInt();
+			super.speed = oi.readInt();
+			super.yearOfProduction = oi.readInt();
+			super.engine = new Engine((String)oi.readObject(), oi.readInt());
+			this.boat = new Boat(oi.readInt(), (String)oi.readObject());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+}
+
+class Engine {
+	String type;
+	int power;
+	
+	Engine(String type, int power) {
+		this.type = type;
+		this.power = power;
+	}
+	
+	Engine() {}
+	
+	public String toString() {
+		return this.type + " - " + this.power;
+	}
+}
+
+class Chassis {
+	Wheel wheel;
+	int numberOfWheels;
+	
+	Chassis(Wheel wheel, int numberOfWheels) {
+		this.wheel = wheel;
+		this.numberOfWheels = numberOfWheels;
+	}
+	
+	Chassis() {}
+	
+	public String toString() {
+		return this.wheel + " | " + this.numberOfWheels;
+	}
+}
+
+class Boat {
+	int numberOfPassagers;
+	String material;
+	
+	Boat(int numberOfPassagers, String material) {
+		this.numberOfPassagers = numberOfPassagers;
+		this.material = material;
+	}
+	
+	Boat() {}
+	
+	public String toString() {
+		return this.numberOfPassagers + " - " + this.material;
+	}
+}
+
+class Wheel {
+	int load;
+	int diameter;
+	
+	Wheel(int load, int diameter) {
+		this.load = load;
+		this.diameter = diameter;
+	}
+	
+	Wheel() {}
+	
+	public String toString() {
+		return this.load + " - " + this.diameter;
+	}
+}

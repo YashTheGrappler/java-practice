@@ -1,0 +1,105 @@
+package learning;
+
+import java.sql.*;
+import java.util.*;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+        String password = "password",
+               userName = "root",
+               url_In = "jdbc:mysql://localhost:3306/firstdb",
+               url_Out = "jdbc:mysql://localhost:3306/seconddb";
+        
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+        
+        	List<Bottle> bottles = Controller.readBottlesDataBase(url_In, userName, password, Bottles1Queries.VOLUME_LESS_0_51);
+        	System.out.println(bottles);
+        
+        	Controller.setBottlesDataBase(url_Out, userName, password, bottles);
+        
+        	bottles = Controller.readBottlesDataBase(url_Out, userName, password, Bottles2Queries.SELECT_ALL);
+        	System.out.println(bottles);
+        
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }
+    }
+}
+
+class Controller {
+	static List<Bottle> readBottlesDataBase(String url, String userName, String password, String sqlQuery) throws Exception{
+		
+		try(Connection connect = DriverManager.getConnection(url, userName, password);
+			Statement state = connect.createStatement();
+			ResultSet resultSet = state.executeQuery(sqlQuery)){
+			
+			List<Bottle> bottles = new ArrayList<>();
+			while (resultSet.next()) 
+				bottles.add(new Bottle(resultSet.getDouble(2),
+									   resultSet.getString(3),
+                                       resultSet.getString(4)));
+
+			return bottles;
+		}
+	}
+	
+	static void setBottlesDataBase(String url, String userName, String password, List<Bottle> bottles) throws Exception{
+		
+		try(Connection connect = DriverManager.getConnection(url, userName, password);
+			Statement state = connect.createStatement();){
+		
+			state.executeUpdate(Bottles2Queries.DELETE_ALL);
+
+			PreparedStatement preparedState = connect.prepareStatement(Bottles2Queries.INSERT);
+			for (Bottle temp : bottles) {
+				preparedState.setDouble(1, temp.volume);
+				preparedState.setString(2, temp.drink);
+				preparedState.setString(3, temp.material);
+				preparedState.executeUpdate();
+			}
+		}
+	}
+}
+
+class Bottle {
+    double volume;
+    String drink, material;
+
+    Bottle(double volume, String drink, String material) {
+        this.volume = volume;
+        this.drink = drink;
+        this.material = material;
+    }
+    
+    Bottle(){}
+
+    public String toString() {
+        return this.volume + " " + this.drink + " " + this.material;
+    }
+}
+
+class Bottles1Queries {
+    public static final String SELECT_ALL = "SELECT * FROM Bottles";
+
+    public static final String VOLUME_LESS_0_51 = "SELECT * FROM Bottles WHERE Volume < 0.51";
+    public static final String VOLUME_0_51_TO_0_99 = "SELECT * FROM Bottles WHERE Volume > 0.5 AND Volume < 1.0";
+    public static final String VOLUME_MORE_1 = "SELECT * FROM Bottles WHERE Volume > 0.99";
+
+    public static final String DRINK_WINE = "SELECT * FROM Bottles WHERE Drink = 'Wine'";
+    public static final String DRINK_JUICE = "SELECT * FROM Bottles WHERE Drink = 'Juice'";
+    public static final String DRINK_WATER = "SELECT * FROM Bottles WHERE Drink = 'Water'";
+
+    public static final String MATERIAL_METAL = "SELECT * FROM Bottles WHERE Material = 'Metal'";
+    public static final String MATERIAL_GLASS = "SELECT * FROM Bottles WHERE Material = 'Glass'";
+    public static final String MATERIAL_PLASTIC = "SELECT * FROM Bottles WHERE Material = 'Plastic'";
+}
+
+class Bottles2Queries {
+	public static final String INSERT = "INSERT INTO Bottles2 (Volume, Drink, Material) VALUES (?, ?, ?)";
+	
+    public static final String SELECT_ALL = "SELECT * FROM Bottles2";
+    
+    public static final String DELETE_ALL = "DELETE FROM Bottles2";
+}
+

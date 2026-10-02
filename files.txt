@@ -1,0 +1,196 @@
+package files;
+
+import java.io.*;
+import java.util.*;
+
+public class Dispacher {
+	public static void main(String[] args) {
+		String inputPath = "InputFiles";
+		int sortType = 999;/* 1 - Name > Volume > Material
+						      2 - Material > Volume > Name
+		(BASIC) Everything else - Volume > Material > Name*/ 
+		
+		BottleGroups bottles = BottleGroups.readBottleGroups(inputPath);
+		//bottles.printGroups();
+		bottles.sortBottleGroups(sortType);
+		//bottles.printGroups();
+		bottles.writeBottleGroupsToFiles();
+	}
+}
+
+class Bottle implements Comparable<Bottle>{
+	private String name;
+	private double volume;
+	private String material;
+	
+	Bottle(String name, double volume, String material) {
+		this.name = name;
+		this.volume = volume;
+		this.material = material;
+	}
+	
+	String getName() {
+		return name;
+	}
+	
+	double getVolume() {
+		return volume;
+	}
+	
+	String getMaterial() {
+		return material;
+	}
+	
+	/*----------------------------------------
+	 (BASIC) - Volume > Material > Name 
+	----------------------------------------*/
+	@Override
+	public int compareTo(Bottle b2) {
+		int volumeCompare = Double.compare(this.volume, b2.volume);
+		if(volumeCompare == 0) {
+			int materialCompare = this.material.compareTo(b2.material);
+			if(materialCompare == 0) {
+				return this.name.compareTo(b2.name);
+			}else return materialCompare;
+		}else return volumeCompare;
+	};
+	
+	/*----------------------------------------
+           1 - Name > Volume > Material
+    ----------------------------------------*/
+	
+	private final static Comparator<Bottle> COMPARATOR_NAME_VOLUME_MATERIAL = (b1, b2) -> {
+		int nameCompare = b1.name.compareTo(b2.name);
+		if(nameCompare == 0) {
+			int volumeCompare = Double.compare(b1.volume, b2.volume);
+			if(volumeCompare == 0) {
+				return b1.material.compareTo(b2.material);
+			}else return volumeCompare;
+		}else return nameCompare;
+	};
+	
+	/*----------------------------------------
+	       2 - Material > Volume > Name 
+    ----------------------------------------*/
+	
+	private final static Comparator<Bottle> COMPARATOR_MATERIAL_VOLUME_NAME = (b1, b2) -> {
+		int materialCompare = b1.material.compareTo(b2.material);
+		if(materialCompare == 0) {
+			int volumeCompare = Double.compare(b1.volume, b2.volume);
+			if(volumeCompare == 0) {
+				return b1.name.compareTo(b2.name);
+			}else return volumeCompare;
+		}else return materialCompare;
+	};
+	
+	static Comparator<Bottle> getBottleComparator(int sortType) {
+        switch (sortType) {
+            case 1: return COMPARATOR_NAME_VOLUME_MATERIAL;
+            case 2: return COMPARATOR_MATERIAL_VOLUME_NAME;
+            default: return Bottle::compareTo;
+        }
+    }
+}
+
+class BottleGroups{
+	private ArrayList<Bottle> lessThan051;
+	private ArrayList<Bottle> lessThan100;
+	private ArrayList<Bottle> moreThan099;
+	
+	BottleGroups(){
+		this.lessThan051 = new ArrayList<>();
+		this.lessThan100 = new ArrayList<>();
+		this.moreThan099 = new ArrayList<>();
+	}
+	
+	static BottleGroups readBottleGroups(String inputPath){
+		File [] files = new File(inputPath).listFiles();
+		BottleGroups bottles = new BottleGroups();
+		for(File currentFile : files) {
+			try(BufferedReader reader = new BufferedReader(new FileReader(currentFile))) {
+				
+				String line = reader.readLine();
+				if (!line.equals("N Bottle Volume Material"))
+					throw new IOException();
+				
+				String[] split;
+				while((line = reader.readLine()) != null) {
+	                split = line.split(" ");
+	                double volume = Double.parseDouble(split[2]);
+	                if(volume < 0.51)
+	                	bottles.lessThan051.add(new Bottle(split[1], volume, split[3]));
+	                else if(volume < 1)
+	                	bottles.lessThan100.add(new Bottle(split[1], volume, split[3]));
+	                else
+	                	bottles.moreThan099.add(new Bottle(split[1], volume, split[3]));
+	            }
+	                
+			}catch(NumberFormatException | IOException e) {
+	            e.printStackTrace();
+			}
+		}
+		return bottles;
+	}
+	
+	void sortBottleGroups(int sortType) {
+		Comparator<Bottle> comparator = Bottle.getBottleComparator(sortType);
+		lessThan051.sort(comparator);
+		lessThan100.sort(comparator);
+		moreThan099.sort(comparator);
+	}
+	
+	void writeBottleGroupsToFiles() {
+		File directory = new File("OutputFiles");
+		try {
+			if (!directory.exists()) {
+            	boolean created = directory.mkdirs();
+            	if (!created) {
+            		IOException e = new IOException("Unable to create directory - " + directory.getAbsolutePath());
+                	throw e;
+            	}
+			}
+		}catch(IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		try (PrintWriter lessThan051Writer = new PrintWriter(new BufferedWriter(new FileWriter("OutputFiles/lessThan051.txt")));
+			 PrintWriter lessThan100Writer = new PrintWriter(new BufferedWriter(new FileWriter("OutputFiles/lessThan100.txt")));
+			 PrintWriter moreThan099Writer = new PrintWriter(new BufferedWriter(new FileWriter("OutputFiles/moreThan099.txt")))) {
+			int i = 1;
+			for(Bottle bottle : lessThan051) {
+				lessThan051Writer.println(i + " " + bottle.getName() + " " + bottle.getVolume() + " " + bottle.getMaterial());
+				i++;
+			}
+			i = 1;
+			for(Bottle bottle : lessThan100) {
+				lessThan100Writer.println(i + " " + bottle.getName() + " " + bottle.getVolume() + " " + bottle.getMaterial());
+				i++;
+			}
+			i = 1;
+			for(Bottle bottle : moreThan099) {
+				moreThan099Writer.println(i + " " + bottle.getName() + " " + bottle.getVolume() + " " + bottle.getMaterial());
+				i++;
+			}
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	void printGroups() {
+		for(Bottle bottle : lessThan051)
+			System.out.println(bottle.getName() + " " 
+							 + bottle.getVolume() + " " 
+							 + bottle.getMaterial());
+		System.out.println();
+		for(Bottle bottle : lessThan100)
+			System.out.println(bottle.getName() + " " 
+							 + bottle.getVolume() + " " 
+							 + bottle.getMaterial());
+		System.out.println();
+		
+		for(Bottle bottle : moreThan099)
+			System.out.println(bottle.getName() + " " 
+		                     + bottle.getVolume() + " " 
+		                     + bottle.getMaterial());
+		System.out.println();
+	}
+}

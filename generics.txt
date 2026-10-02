@@ -1,0 +1,145 @@
+package learning;
+
+import java.util.*;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+    	ArrayList<Animal> arrayList = new ArrayList<>(Arrays.asList(new Animal(10, 3),
+    																new Dog(15, 5, 5),
+    																new Cat(7, 2, 8),
+    																new Poodle(12, 4, 2, 9),
+    																new Dog(15, 5, 1)));
+    																new Poodle(12, 4, 3, 9);
+    	Animal[] array = {new Animal(10, 3),
+    					  new Dog(15, 5, 1),
+    					  new Cat(7, 2, 3),
+    					  new Poodle(12, 4, 2, 8),
+    					  new Dog(20, 6, 3),
+    					  new Cat(7, 2, 1)};
+    	
+    	System.out.println(arrayList);
+    	System.out.println(Arrays.toString(array));
+    	System.out.println();
+    	Map<Animal, Integer> map = Controller.getJointElementsMap(arrayList, array);
+    	System.out.println(map);
+    	System.out.println();
+    	Controller.addMissingElementsToArrayList(arrayList, array);
+    	System.out.println(arrayList);
+    }
+}
+
+class Controller {
+	static <T> Map<T, Integer> getJointElementsMap(ArrayList<T> arrayList, T[] array){
+		Map<T, Integer> map = new HashMap<>();
+		Set<T> jointSet = new HashSet<>();
+		Integer count;
+		
+		for(T objFromArrayList : arrayList) 
+			for(T objFromArray : array) 
+				if(objFromArrayList.equals(objFromArray))
+					jointSet.add(objFromArrayList);
+		
+		for(T objFromSet : jointSet) {
+			count = 0;
+			for(T objFromArrayList : arrayList) 
+				if(objFromSet.equals(objFromArrayList)) 
+					count++;
+			
+			for(T objFromArray : array) 
+				if(objFromSet.equals(objFromArray)) 
+					count++;
+			
+			map.put(objFromSet, count);
+		}
+		return map;
+	}
+	
+	static <T> void addMissingElementsToArrayList(ArrayList<T> arrayList, T[] array) {
+		boolean hasElement = false;
+		Set<T> arraySet = new HashSet<>();
+		
+		for(T objFromArray : array) 
+			arraySet.add(objFromArray);
+		
+		for(T objFromArraySet : arraySet) {
+			hasElement = false;
+			for(T objFromArrayList : arrayList){
+				if(objFromArrayList.equals(objFromArraySet)) {
+					hasElement = true;
+					break;
+				}
+			}
+			if(!hasElement)
+				arrayList.add(objFromArraySet);
+		}
+	}
+}
+
+class Animal {
+	int weight;
+	int age;
+	
+	Animal(int weight, int age){
+		this.weight = weight;
+		this.age = age;
+	}
+	
+	Animal(){}
+	
+	public boolean equals(Object o){
+		return this.weight == ((Animal)o).weight && this.age == ((Animal)o).age;
+	}
+	
+	public int hashCode() {
+		return Integer.hashCode(this.weight) * 31 + Integer.hashCode(this.age);
+	}
+	
+	public String toString() {
+		return "Animal(" + this.weight + " " + this.age + ")";
+	}
+}
+
+class Dog extends Animal{
+	int dogField;
+	
+	Dog(int weight, int age, int dogField){
+		super(weight, age);
+		this.dogField = dogField; 
+	}
+	
+	Dog(){}
+	
+	public String toString() {
+		return "Dog(" + this.weight + " " + this.age + " " + this.dogField + ")";
+	}
+}
+
+class Cat extends Animal{
+	int catField;
+	
+	Cat(int weight, int age, int catField){
+		super(weight, age);
+		this.catField = catField; 
+	}
+	
+	Cat(){}
+	
+	public String toString() {
+		return "Cat(" + this.weight + " " + this.age + " " + this.catField + ")";
+	}
+}
+
+class Poodle extends Dog{
+	int poodleField;
+	
+	Poodle(int weight, int age, int dogField, int poodleField){
+		super(weight, age, dogField);
+		this.poodleField = poodleField;
+	}
+	
+	Poodle(){}
+	
+	public String toString() {
+		return "Poodle(" + this.weight + " " + this.age + " " + this.dogField + " " + this.poodleField + ")";
+	}
+}

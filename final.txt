@@ -1,0 +1,162 @@
+package learning;
+
+public class Dispatcher {
+    public static void main(String[] args) {
+      EducationInstitution school = new EducationInstitution();
+      school.addGroup(new Group());
+      school.addStudent(0, new Student("Sergei Ishceryakov"));
+      school.addStudentGrade(0, 0, 2);
+      school.graduateStudent(0, 0);
+      System.out.println(school.getStudentName(0, 0));
+      System.out.println(school.getStudentGrades(0, 0));
+      school.setStudentName(0, 0, "Herman");
+      school.setStudentGrade(0, 0, 0, 12);
+      System.out.println(school.getStudentName(0, 0));
+      System.out.println(school.getStudentGrades(0, 0));     
+    }
+}
+
+import static java.util.Collections.unmodifiableList;
+import java.util.List;
+import java.util.ArrayList;
+
+public final class EducationInstitution {
+	private final List<Group> groups;
+	
+	EducationInstitution() {
+		this.groups = new ArrayList<Group>();
+	}
+	
+	void addGroup(Group group) {
+		groups.add(group);
+	}
+	
+	void removeGroup(int index) {
+		groups.remove(index);
+	}
+	
+	List<Group> getGroups(){
+		return unmodifiableList(groups);
+	}
+	
+	void addStudent(int indexGroup, Student student) {
+		groups.get(indexGroup).addStudent(student);	
+	}
+	
+	void removeStudent(int indexGroup, int indexStudent) {
+		groups.get(indexGroup).removeStudent(indexStudent);
+	}
+	
+	List<Student> getStudents(int indexGroup) {
+		return groups.get(indexGroup).getStudents();
+	}
+	
+	void graduateStudent(int indexGroup, int indexStudent) {
+		groups.get(indexGroup).getStudent(indexStudent).graduate();
+	}
+	
+	String getStudentName(int indexGroup, int indexStudent) {
+		return groups.get(indexGroup).getStudent(indexStudent).getName();
+	}
+	
+	void setStudentName(int indexGroup, int indexStudent, String name) {
+		groups.get(indexGroup).getStudent(indexStudent).setName(name);
+	}
+	
+	int getStudentGrade(int indexGroup, int indexStudent, int indexGrade) {
+		return groups.get(indexGroup).getStudent(indexStudent).getGrade(indexGrade);
+	}
+	
+	void addStudentGrade(int indexGroup, int indexStudent, int grade) {
+		groups.get(indexGroup).getStudent(indexStudent).addGrade(grade);
+	}
+	
+	void setStudentGrade(int indexGroup, int indexStudent, int indexGrade, int grade) {
+		groups.get(indexGroup).getStudent(indexStudent).setGrade(indexGrade, grade);
+	}
+
+	List<Integer> getStudentGrades(int indexGroup, int indexStudent){
+		return groups.get(indexGroup).getStudent(indexStudent).getGrades();
+	}
+}
+
+import static java.util.Collections.unmodifiableList;
+import java.util.List;
+import java.util.ArrayList;
+
+public final class Group {
+	private final List<Student> students;
+	
+	Group() {
+		this.students = new ArrayList<Student>();
+	}
+	
+	Student getStudent(int index) {
+		return students.get(index);
+	}
+	
+	void addStudent(Student student) {
+		students.add(student);
+	}
+	
+	void removeStudent(int index) {
+		students.remove(index);
+	}
+	
+	List<Student> getStudents(){
+		return unmodifiableList(students);
+	}
+}
+
+import static java.util.Collections.unmodifiableList;
+import java.util.List;
+import java.util.ArrayList;
+
+public final class Student {
+	private String name;
+	private List<Integer> grades;
+	private boolean graduate;
+	
+	Student(String name){
+		this.name = name;
+		this.grades = new ArrayList<Integer>();
+	}
+	
+	void graduate() {
+		graduate = true;
+	    grades = unmodifiableList(grades);
+	}
+	
+	String getName() {
+		return name;
+	}
+	
+	void setName(String name) {
+		if(graduate) {System.out.println("Student graduated");}
+		else {
+			this.name = name;
+		}
+	}
+	
+	int getGrade(int index) {
+		return grades.get(index);
+	}
+	
+	void addGrade(int grade) {
+		if(graduate) {System.out.println("Student graduated");}
+		else {
+			grades.add(grade);
+		}
+	}
+	
+	void setGrade(int index, int grade) {
+		if(graduate) {System.out.println("Student graduated");}
+		else {
+			grades.set(index, grade);
+		}
+	}
+	
+	List<Integer> getGrades(){
+		return graduate ? grades : unmodifiableList(grades);
+	}
+}

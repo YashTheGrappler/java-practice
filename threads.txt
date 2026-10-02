@@ -1,0 +1,127 @@
+package learning;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.io.*;
+
+public class Dispatcher {
+	class FilePunctuationMarksCountWrapperContainerForRunnable{
+		static FilePunctuationMarksCountWrapper fpmcw1;
+	}
+	public static void main(String[] args) {
+		String input1directory = "InputFiles/input1.txt";
+		String input2directory = "InputFiles/input2.txt";
+		String input3directory = "inputFiles/input3.txt";
+		
+		Runnable runnable1 = () -> {
+			FilePunctuationMarksCountWrapperContainerForRunnable.fpmcw1 = new FilePunctuationMarksCountWrapper(input1directory);
+		};
+		Callable<FilePunctuationMarksCountWrapper> callable2 = () -> {
+			return new FilePunctuationMarksCountWrapper(input2directory);
+		};
+		Callable<FilePunctuationMarksCountWrapper> callable3 = () -> {
+			return new FilePunctuationMarksCountWrapper(input3directory);
+		};
+		FutureTask<FilePunctuationMarksCountWrapper> futureTask = new FutureTask<>(callable2);
+		Thread threadForCallable = new Thread(futureTask);
+		ExecutorService executorServiceForCallable = Executors.newSingleThreadExecutor();
+		Thread threadForRunnable = new Thread(runnable1);
+		
+		
+		long time1 = System.nanoTime();
+        threadForRunnable.start();
+        threadForCallable.start();
+        Future<FilePunctuationMarksCountWrapper> future = executorServiceForCallable.submit(callable3);
+        try {
+        	threadForRunnable.join();
+        	
+        	FilePunctuationMarksCountWrapper fpmcw2 = futureTask.get();
+        	FilePunctuationMarksCountWrapper fpmcw3 = future.get();
+        	long time2 = System.nanoTime() - time1;
+        	
+        	System.out.println(time2);
+        	TreeSet<FilePunctuationMarksCountWrapper> treeSet = new TreeSet<>();
+    		treeSet.add(FilePunctuationMarksCountWrapperContainerForRunnable.fpmcw1);
+    		treeSet.add(fpmcw2);
+    		treeSet.add(fpmcw3);
+    		System.out.println(treeSet);
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }finally {
+        	executorServiceForCallable.shutdown();
+        }
+        
+        
+        
+		time1 = System.nanoTime();
+		FilePunctuationMarksCountWrapper fpmcw1 = new FilePunctuationMarksCountWrapper(input1directory);
+		FilePunctuationMarksCountWrapper fpmcw2 = new FilePunctuationMarksCountWrapper(input2directory);
+		FilePunctuationMarksCountWrapper fpmcw3 = new FilePunctuationMarksCountWrapper(input3directory);
+		long time2 = System.nanoTime() - time1;
+		System.out.println(time2);
+		TreeSet<FilePunctuationMarksCountWrapper> treeSet = new TreeSet<>();
+		treeSet.add(fpmcw1);
+		treeSet.add(fpmcw2);
+		treeSet.add(fpmcw3);
+		System.out.println(treeSet);
+		}
+}
+
+class FilePunctuationMarksCountWrapper implements Comparable<FilePunctuationMarksCountWrapper>{
+	private File file;
+	private int punctuationMarksCount = 0;
+	
+	FilePunctuationMarksCountWrapper(String fileDirectory) {
+		this.file = new File(fileDirectory);
+		countPunctuationMarksFromFile();
+	}
+	
+	FilePunctuationMarksCountWrapper(File file) {
+		this.file = file;
+		countPunctuationMarksFromFile();
+	}
+	
+	FilePunctuationMarksCountWrapper(File file, int punctuationMarksCount) {
+		this.file = file;
+		this.punctuationMarksCount = punctuationMarksCount;
+	}
+	
+	public boolean equals(Object o) {
+		return this.file.equals(((FilePunctuationMarksCountWrapper)o).getFile());
+	}
+	
+	public int hashCode() {
+		return this.file.hashCode();
+	}
+	
+	public String toString() {
+		return this.file + " - " + this.punctuationMarksCount;
+	}
+	
+	public int compareTo(FilePunctuationMarksCountWrapper fpmcw) {
+		int cmp = fpmcw.punctuationMarksCount - this.punctuationMarksCount;
+		return  cmp == 0? this.file.compareTo(fpmcw.file): cmp;
+	}
+	
+	private void countPunctuationMarksFromFile() {
+		try(BufferedReader reader = new BufferedReader(new FileReader(this.file))) {
+			
+			int character;
+			while((character = reader.read()) != -1) {
+				if (!Character.isLetterOrDigit(character) && !Character.isWhitespace(character)) {
+				    this.punctuationMarksCount++;
+				}
+			}
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	int getPunctuationMarksCount() {
+		return this.punctuationMarksCount;
+	}
+	
+	File getFile() {
+		return this.file;
+	}
+}

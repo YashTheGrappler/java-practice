@@ -1,0 +1,284 @@
+package learning;
+
+import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		LinesAndPointsIntersectionFinder intersections = new LinesAndPointsIntersectionFinder();
+		Scanner scanner = new Scanner(System.in);
+		int input;
+		programm:
+		while(true) {
+			System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" + intersections + "\n");
+		    input = Controller.readIntInput(scanner, "Add point - 1\nRemove point - 2\nSave - 3\nLoad - 4\nExit - 5\n- ");
+		    switch(input){
+		        case 1:
+		         	intersections.addPoint(new Point(Controller.readIntInput(scanner, "x - "), Controller.readIntInput(scanner, "y - ")));
+		        	break;
+		        case 2:
+		         	intersections.removePoint(new Point(Controller.readIntInput(scanner, "x - "), Controller.readIntInput(scanner, "y - ")));
+		        	break;
+		        case 3:
+		        	System.out.println("Save");
+		        	break;
+		        case 4:
+		        	System.out.println("Load");
+		        	break;
+		        case 5:
+		        	break programm;
+		        default:
+		        	System.out.println("Invalid input! Try again.");
+		    }
+		}
+		/*String outputPath = "OutputFiles/LINES";
+		HashSet<Point> pointsHashSet = new HashSet<>(Arrays.asList(new Point(12, 14),
+                              						new Point(12, 14), 
+                              						new Point(0, 0), 
+                              						new Point(3, 0), 
+                              						new Point(12, 0)));
+		
+		new LinesAndPointsIntersectionFinder(pointsHashSet).serializeTo(outputPath);
+		System.out.println(LinesAndPointsIntersectionFinder.deserializeFrom(outputPath));*/
+	}
+}
+
+class LinesAndPointsIntersectionFinder implements Serializable{
+	private Set<Point> points;
+	private Set<Line> lines;
+	private Map<Point, Integer> numberOfLinesPassingThroughtPoint;
+	private Map<Line, Integer> numberOfPointsOnLine;
+	
+	LinesAndPointsIntersectionFinder(Set<Point> points) {
+		this.points = points;
+		this.findLines();
+		this.findIntersections();
+	}
+	
+	LinesAndPointsIntersectionFinder() {
+		this.points = new HashSet<>();
+		this.lines = new HashSet<>();
+		this.numberOfLinesPassingThroughtPoint = new HashMap<>();
+		this.numberOfPointsOnLine = new HashMap<>();
+	}
+	
+	private void findLines() {
+		Set<Line> lines = new HashSet<>();
+		int pointsLenght = this.points.size();
+		if(pointsLenght < 2) {
+			this.lines = lines;
+		}
+		Point[] pointsTmp = this.points.toArray(new Point[pointsLenght]);
+		
+		for (int firstPointIndex = 0; firstPointIndex < pointsLenght; firstPointIndex++) {
+			for (int secondPointIndex = firstPointIndex + 1; secondPointIndex < pointsLenght; secondPointIndex++) {
+				lines.add(new Line(pointsTmp[firstPointIndex], pointsTmp[secondPointIndex]));
+			}
+		}
+		this.lines = lines;
+	}
+	
+	private void findIntersections() {
+		HashMap <Point, Integer> numberOfLinesPassingThroughtPoint = new HashMap<>();
+		HashMap <Line, Integer> numberOfPointsOnLine = new HashMap<>();
+		int linesCount;
+		for(Point point : this.points) {
+			linesCount = 0;
+			for(Line line : this.lines) {
+				if(line.isPointOnLine(point)) {
+					linesCount++;
+					numberOfPointsOnLine.merge(line, 1, Integer::sum);
+				}
+			}
+			numberOfLinesPassingThroughtPoint.put(point, linesCount);
+		}
+		this.numberOfLinesPassingThroughtPoint = numberOfLinesPassingThroughtPoint;
+		this.numberOfPointsOnLine = numberOfPointsOnLine;
+	}
+	
+	void serializeTo(String path) {
+		try {
+			Controller.outputDirectoryCheck(path);
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path))) {
+			oos.writeObject(this);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	static LinesAndPointsIntersectionFinder deserializeFrom(String path) {
+		try (ObjectInputStream oin = new ObjectInputStream(new FileInputStream(path))) {
+			return (LinesAndPointsIntersectionFinder) oin.readObject();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new LinesAndPointsIntersectionFinder();
+		}
+	}
+	
+	boolean addPoint(Point p) {
+		if(this.points.add(p)) {
+			this.findLines();
+			this.findIntersections();
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
+	boolean removePoint(Point p) {
+		if(this.points.remove(p)) {
+			this.findLines();
+			this.findIntersections();
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
+	void setPoints(Set<Point> points) {
+		this.points = points;
+		this.findLines();
+		this.findIntersections();
+	}
+	
+	Set<Point> getPoints() {
+		return this.points;
+	}
+	
+	Set<Line> getLines() {
+		return this.lines;
+	}
+	
+	Map<Point, Integer> getNumberOfLinesPassingThroughtPoint() {
+		return this.numberOfLinesPassingThroughtPoint;
+	}
+	
+	Map<Line, Integer> getNumberOfPointsOnLine() {
+		return this.numberOfPointsOnLine;
+	}
+	
+	public String toString() {
+		return this.numberOfLinesPassingThroughtPoint + "\n" + this.numberOfPointsOnLine;
+	}
+}
+
+class Controller {
+	static void outputDirectoryCheck(String path) throws IOException {
+		File outputDirectory = new File(path).getParentFile();
+		if (!outputDirectory.exists()) {
+			boolean created = outputDirectory.mkdirs();
+            if (!created) {
+            	IOException e = new IOException("Unable to create directory - " + outputDirectory.getAbsolutePath());
+                throw e;
+            }
+		}
+	}
+	
+	static int readIntInput(Scanner scanner, String prompt) {
+	    while (true) {
+	        System.out.print(prompt);
+	        try {
+	            return scanner.nextInt();
+	        } catch (Exception e) {
+	            System.out.println("Invalid input! Try again.");
+	        } finally {
+	            scanner.nextLine();
+	        }
+	    }
+	}
+}
+
+class Point implements Serializable{
+	private int x;
+	private int y;
+  
+	Point(int x, int y){
+		this.x = x;
+		this.y = y;
+	}
+  
+	Point(){}
+  
+	public int getX() {
+		return this.x;
+	}
+	
+	public int getY() {
+		return this.y;
+	}
+	
+	public String toString() {
+		return "Point (" + this.x + ", " + this.y + ")";
+	}
+  
+	public boolean equals(Object o) {
+		return this.x == ((Point)o).x && this.y == ((Point)o).y;
+	}
+  
+	public int hashCode() {
+		return Integer.hashCode(x) * 31 + Integer.hashCode(y);
+	}
+}
+
+class Line implements Serializable{
+	private double k;
+	private double b;
+	private boolean isVertical; 
+    private int verticalX; 
+  
+    Line(Point p1, Point p2){
+    	if(p1.getX() > p2.getX()) {
+    		Point temp = p1;
+    		p1 = p2;
+    		p2 = temp;
+    	}
+    	double x1 = p1.getX();
+        double deltaX = p2.getX() - x1;
+        if(deltaX == 0) {
+        	this.k = Double.POSITIVE_INFINITY;
+        	this.b = Double.NaN;
+        	this.isVertical = true;
+        	this.verticalX = (int)x1;
+        }else {
+        	double y1 = p1.getY();
+        	double deltaY = p2.getY() - y1;
+        	this.k = deltaY / deltaX;  
+            this.b = y1 - this.k * x1;
+            this.isVertical = false;
+            this.verticalX = 0;
+        }
+    }
+  
+    Line(){}
+  
+    boolean isPointOnLine(Point p) {
+    	return this.isVertical? this.verticalX == p.getX(): this.k*p.getX() + b == p.getY();
+    }
+    
+    public double getK() {
+    	return this.k;
+    }
+  
+    public double getB() {
+    	return this.b;
+    }
+    
+    public String toString() {
+    	if(isVertical) {
+    		return "Vertical line x - " + verticalX;
+    	}else {
+    		return "Line - " + this.k + "*x + " + this.b;
+    	}
+    }	
+    	
+    public boolean equals(Object o) {
+    	return isVertical? this.verticalX == ((Line)o).verticalX : this.k == ((Line)o).k && this.b == ((Line)o).b;
+    }
+  
+    public int hashCode() {
+    	return isVertical? Integer.hashCode(verticalX): Double.hashCode(k) * 31 + Double.hashCode(b);
+    }
+}

@@ -1,0 +1,193 @@
+package learning;
+
+import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		String outputPath = "OutputFiles/LINES";
+		HashSet<Point> pointsHashSet = new HashSet<>(Arrays.asList(new Point(12, 14),
+															new Point(12, 14), 
+															new Point(0, 0), 
+															new Point(3, 0), 
+															new Point(12, 0)));
+		List<Point> pointsList = new ArrayList<>(pointsHashSet);
+		HashSet<Line> linesHashSet = Controller.createLinesHashSet(pointsList);
+		List<Line> linesList = new ArrayList<>(linesHashSet);
+		HashMap <Point, Integer> pointsHashMap = Controller.getPointsHashMap(pointsList, linesList);
+		HashMap <Line, Integer> linesHashMap = Controller.getLinesHashMap(linesList, pointsList);
+		Controller.serializeHashMaps(pointsHashMap, linesHashMap, outputPath);
+		System.out.println(Controller.deserializePointsAndLinesHashMaps(outputPath));
+	}
+}
+
+class Controller{
+	static HashSet<Line> createLinesHashSet(List<Point> pointsList){
+		HashSet<Line> linesHashSet = new HashSet<>();
+		for (int firstPointIndex = 0; firstPointIndex < pointsList.size(); firstPointIndex++) {
+		    Point p1 = pointsList.get(firstPointIndex);
+		    for (int secondPointIndex = firstPointIndex + 1; secondPointIndex < pointsList.size(); secondPointIndex++) {
+		        Point p2 = pointsList.get(secondPointIndex);
+		        linesHashSet.add(new Line(p1, p2));
+		    }
+		}
+		return linesHashSet;
+	}
+	
+	static HashMap <Point, Integer> getPointsHashMap(List<Point> pointsList, List<Line> linesList){
+		HashMap <Point, Integer> pointsHashMap = new HashMap <>();
+		int linesCount;
+		for (Point point : pointsList) {
+			linesCount = 0;
+			for(Line line : linesList) {
+				if(line.isPointOnLine(point))
+					linesCount++;
+			}
+			pointsHashMap.put(point, linesCount);
+		}
+		return pointsHashMap;
+	}
+	
+	static HashMap <Line, Integer> getLinesHashMap(List<Line> linesList, List<Point> pointsList){
+		HashMap <Line, Integer> linesHashMap = new HashMap<>();
+		int pointsCount;
+		for (Line line : linesList) {
+			pointsCount = 0;
+			for (Point point : pointsList) {
+				if (line.isPointOnLine(point)) {
+					pointsCount++;
+				}
+			}
+			linesHashMap.put(line, pointsCount);
+		}
+		return linesHashMap;
+	}
+	
+	static void serializeHashMaps(HashMap<Point, Integer> pointHashMap, HashMap<Line, Integer> lineHashMap, String path) {
+		try {
+			outputDirectoryCheck(path);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+		try (ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(path))) {
+			stream.writeObject(pointHashMap);
+			stream.writeObject(lineHashMap);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	static List<HashMap<?, Integer>> deserializePointsAndLinesHashMaps(String path) {
+		try (ObjectInputStream stream = new ObjectInputStream(new FileInputStream(path))) {
+			HashMap<Point, Integer> pointHashMap = (HashMap<Point, Integer>)stream.readObject();
+			HashMap<Line, Integer> lineHashMap = (HashMap<Line, Integer>)stream.readObject();
+			return Arrays.asList(pointHashMap, lineHashMap);
+		} catch (Exception e) {
+			e.printStackTrace();
+			 return Collections.emptyList();
+		}
+	}
+	
+	static void outputDirectoryCheck(String outputPath) throws IOException {
+		File outputDirectory = new File(outputPath).getParentFile();
+		if (!outputDirectory.exists()) {
+            boolean created = outputDirectory.mkdirs();
+            if (!created) {
+            	IOException e = new IOException("Unable to create directory - " + outputDirectory.getAbsolutePath());
+                throw e;
+            }
+		}
+	}     
+}
+
+class Point implements Serializable{
+	private int x;
+	private int y;
+	
+	Point(int x, int y){
+		this.x = x;
+		this.y = y;
+	}
+	
+	Point(){}
+	
+	public String toString() {
+		return "Point (" + this.x + ", " + this.y + ")";
+	}
+	
+	public boolean equals(Object o) {
+		return this.x == ((Point)o).x && this.y == ((Point)o).y;
+	}
+	
+	public int hashCode() {
+		return Integer.hashCode(x) * 31 + Integer.hashCode(y);
+	}
+	
+	public int getX() {
+		return this.x;
+	}
+	
+	public int getY() {
+		return this.y;
+	}
+}
+
+class Line implements Serializable{
+	private double k;
+	private double b;
+	private boolean isVertical; 
+    private int verticalX; 
+	
+	Line(Point p1, Point p2){
+		if(p1.getX() > p2.getX()) {
+			Point temp = p1;
+			p1 = p2;
+			p2 = temp;
+		}
+		double x1 = p1.getX();
+        double deltaX = p2.getX() - x1;
+        if(deltaX == 0) {
+        	this.k = Double.POSITIVE_INFINITY;
+        	this.b = Double.NaN;
+        	this.isVertical = true;
+        	this.verticalX = (int)x1;
+        }else {
+        	double y1 = p1.getY();
+        	double deltaY = p2.getY() - y1;
+        	this.k = deltaY / deltaX;  
+            this.b = y1 - this.k * x1;
+            this.isVertical = false;
+            this.verticalX = 0;
+        }
+	}
+	
+	Line(){}
+	
+	boolean isPointOnLine(Point p) {
+		return this.isVertical? this.verticalX == p.getX(): this.k*p.getX() + b == p.getY();
+	}
+	
+	public String toString() {
+		if(isVertical) {
+			return "Vertical line x = " + verticalX;
+		}else {
+			return "Line = " + this.k + "*x + " + this.b;
+		}
+	}
+	
+	public boolean equals(Object o) {
+		return isVertical? this.verticalX == ((Line)o).verticalX : this.k == ((Line)o).k && this.b == ((Line)o).b;
+	}
+	
+	public int hashCode() {
+		return isVertical? Integer.hashCode(verticalX): Double.hashCode(k) * 31 + Double.hashCode(b);
+	}
+	
+	public double getK() {
+		return this.k;
+	}
+	
+	public double getB() {
+		return this.b;
+	}
+}

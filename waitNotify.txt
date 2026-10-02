@@ -1,0 +1,197 @@
+package learning;
+
+import java.io.*;
+import java.util.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		List<String> filesPaths = Arrays.asList("InputFiles/a.txt", "InputFiles/b.txt", "InputFiles/c.txt");
+		List<FileWrapper> fileWrappers = new ArrayList<>();
+		for(String path : filesPaths) {
+			fileWrappers.add(new FileWrapper(path));
+		}
+		Thread threadForCountSpaces = new ThreadForCountSpaces(fileWrappers);
+		Thread threadForCapitalizeLetters = new ThreadForCapitalizeLetters(fileWrappers);
+		long time1;
+		
+		time1 = System.currentTimeMillis();
+        try {
+        	threadForCapitalizeLetters.join();
+        	long time2 = System.currentTimeMillis() - time1;
+        	System.out.println(time2);
+        	
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }
+	}
+}
+
+class ThreadForCountSpaces extends Thread {
+	private final List<FileWrapper> fileWrappers;
+	
+	ThreadForCountSpaces(List<FileWrapper> list){
+		this.fileWrappers = list;
+		this.start();
+	}
+	
+	public void run(){
+		for(FileWrapper fileWrapper : fileWrappers) {
+			fileWrapper.CountSpacesInFile();
+		}
+	}
+}
+
+class ThreadForCapitalizeLetters extends Thread {
+	private final List<FileWrapper> fileWrappers;
+	
+	ThreadForCapitalizeLetters(List<FileWrapper> list){
+		this.fileWrappers = list;
+		this.start();
+	}
+	
+	public void run(){
+		for(FileWrapper fileWrapper : fileWrappers) {
+			fileWrapper.CapitalizeLettersDependingOnSpacesCount();
+		}
+	}
+}
+
+class FileWrapper {
+	private final File file;
+	private List<String> lines = new ArrayList<>();
+	private int spacesCount = 0;
+	private boolean isProcessed = false;
+	
+	FileWrapper(String path) {
+		this.file = new File(path);
+	}
+	
+	FileWrapper(File file) {
+		this.file = file;
+	}
+	
+	synchronized private void readLines() {
+		try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+			String line;
+			while((line = reader.readLine()) != null) {
+				lines.add(line);
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	synchronized void CountSpacesInFile() {
+		this.readLines();
+		for(String line : this.lines) {
+			for(int i = 0; i < line.length(); i++) {
+				if(Character.isSpaceChar(line.charAt(i))) {
+					spacesCount++;
+				}
+			}
+		}
+		this.isProcessed = true;
+		notify();
+	}
+	
+	synchronized void CapitalizeLettersDependingOnSpacesCount() {
+		try{
+			while(!this.isProcessed) {
+				wait();
+			}
+			if((this.spacesCount & 1) == 0) {
+				this.CapitalizeFirstLettersInFile();
+			}else {
+				this.CapitalizeLastLettersInFile();
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	synchronized private void CapitalizeFirstLettersInFile() {
+	    try (PrintWriter writer = new PrintWriter(new FileWriter(this.file))) {
+	    	StringBuilder newLine = new StringBuilder();
+            String[] words;
+            int wordLenght;
+            char firstChar;
+	        for (String line : this.lines) {
+	        	if(line.length() == 0) {
+	        		writer.println();
+	        		continue;
+	        	}
+	        	words = line.split("\\s+");
+	            for (String word : words) {
+	            	if (!word.isEmpty()) {
+	            		wordLenght = word.length();
+	            		firstChar = word.charAt(0);
+	            		if((firstChar == '"' || firstChar == '(' || firstChar == '«') && wordLenght > 1) {
+	            			newLine.append(firstChar);
+	            			newLine.append(Character.toUpperCase(word.charAt(1)));
+	            			if(wordLenght > 2) {
+	            				newLine.append(word.substring(2));
+	            			}
+	            		}else {
+	            			newLine.append(Character.toUpperCase(word.charAt(0)));
+	            			if(wordLenght > 1) {
+	            				newLine.append(word.substring(1));
+	            			}
+	            		}
+	            		newLine.append(" ");
+	            	}
+	            }
+	            newLine.deleteCharAt(newLine.length() - 1);
+	            writer.println(newLine.toString());
+	            newLine.setLength(0);
+	        }
+	    } catch(Exception e) {
+	        e.printStackTrace();
+	    }
+	}
+
+
+	synchronized private void CapitalizeLastLettersInFile() {
+		try (PrintWriter writer = new PrintWriter(new FileWriter(this.file))) {
+			StringBuilder newLine = new StringBuilder();
+            String[] words;
+            char lastLetter;
+            int lastLetterIndex;
+            int wordLenght;
+	        for (String line : this.lines) {
+	        	if(line.length() == 0) {
+	        		writer.println();
+	        		continue;
+	        	}
+	        	words = line.split("\\s+");
+	            for (String word : words) {
+	            	if (!word.isEmpty()) {
+	            		lastLetterIndex = -1;
+	            		wordLenght = word.length();
+	            		for (int i = wordLenght - 1; i > -1; i--) {
+	                        if ((lastLetter = word.charAt(i)) != ',' && lastLetter != '.' && lastLetter != '!' 
+	                        		&& lastLetter != '?' && lastLetter != '"' && lastLetter != '»'&& lastLetter != ')' && lastLetter != '-') {
+	                            lastLetterIndex = i;
+	                            break;
+	                        }
+	                    }
+	            		if (lastLetterIndex != -1) {
+	                        newLine.append(word.substring(0, lastLetterIndex));
+	                        newLine.append(Character.toUpperCase(word.charAt(lastLetterIndex)));
+	                        if(lastLetterIndex != wordLenght - 1) {
+	                        	newLine.append(word.substring(lastLetterIndex + 1));
+	                        }
+	                    } else {
+	                        newLine.append(word);
+	                    }
+	            		newLine.append(" ");
+	            	}
+	            }
+	            newLine.deleteCharAt(newLine.length() - 1);
+	            writer.println(newLine.toString());
+	            newLine.setLength(0);
+	        }
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

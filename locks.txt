@@ -1,0 +1,95 @@
+package learning;
+
+import java.io.*;
+import java.util.regex.*;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		String input1directory = "InputFiles/a.txt";
+		String input2directory = "InputFiles/b.txt";
+		String input3directory = "InputFiles/c.txt";
+		SumWrapper sumWrapper = new SumWrapper(0);
+		Thread t1 = new Thread(new ThreadFileWithSum(input1directory, sumWrapper));
+		Thread t2 = new Thread(new ThreadFileWithSum(input2directory, sumWrapper));
+		Thread t3 = new Thread(new ThreadFileWithSum(input3directory, sumWrapper));
+		long time1;
+		
+		t1.start(); t2.start(); t3.start();
+		time1 = System.currentTimeMillis();
+        try {
+        	t1.join(); t2.join(); t3.join();
+        	long time2 = System.currentTimeMillis() - time1;
+        	System.out.println(time2);
+        	
+        	System.out.println(sumWrapper.getSum());
+        	
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }
+	}
+}
+
+class SumWrapper{
+	private double sum;
+	private final ReentrantLock lock = new ReentrantLock();
+	
+	SumWrapper(double sum){
+		this.sum = sum;
+	}
+	
+	void add(double number){
+		while(!lock.tryLock()) {
+			System.out.println(Thread.currentThread() + " LOCKED");
+		}
+		try {
+	        this.sum += number;	
+	    }catch(Exception e){
+	        e.printStackTrace();	
+	    }finally {
+	        lock.unlock();
+	    }
+	}
+	
+	double getSum() {
+		return this.sum;
+	}
+	
+	public String toString() {
+		return "" + this.sum;
+	}
+}
+
+class ThreadFileWithSum implements Runnable {
+	final String inputDirectory;
+	private SumWrapper sumWrapper;
+	
+	ThreadFileWithSum(String inputDirectory, SumWrapper sumWrapper){
+		this.inputDirectory = inputDirectory;
+		this.sumWrapper = sumWrapper;
+	}
+	
+	SumWrapper getSum() {
+		return this.sumWrapper;
+	}
+	
+	String getInputDirectory(){
+		return this.inputDirectory;
+	}
+	
+	public void run(){
+		try(BufferedReader reader = new BufferedReader(new FileReader(inputDirectory))){
+			Pattern pattern = Pattern.compile("-?\\d+(?:[.,]\\d+)?");
+			Matcher matcher;
+			String line;
+			while((line = reader.readLine()) != null) {
+				 matcher = pattern.matcher(line);
+				 while (matcher.find()) {
+					 this.sumWrapper.add(Double.parseDouble(matcher.group().replace(',', '.')));
+				 }
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

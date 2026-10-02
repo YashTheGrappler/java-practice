@@ -1,0 +1,143 @@
+package learning;
+
+import java.util.*;
+public class Dispatcher {
+  public static void main(String[] args) {
+    char symbol = 8226;
+    int shift = 0;
+    int rows = 6;
+    int width = 6;
+    ArrayList<SimpleShape> simpleShapes = new ArrayList<SimpleShape>(Arrays.asList(
+        new BottomLeftAngledTriangle(symbol, shift, rows),
+        new TopLeftAngledTriangle(symbol, shift, rows),
+        new BottomRightAngledTriangle(symbol, shift, rows),
+        new TopRightAngledTriangle(symbol, shift, rows),
+        new Rectangle(symbol, shift, rows, width),
+        new HorizontalTrapezoid(symbol, shift, rows, width)));
+
+    for(SimpleShape temp : simpleShapes) {
+      temp.createShape();
+      System.out.println();
+    }
+  }
+}
+
+interface CreateShape {
+	void createShape();
+}
+
+abstract class Shape implements CreateShape {}
+
+abstract class SimpleShape extends Shape {
+  char symbol;
+  int shift;
+  int rows;
+  public SimpleShape(char symbol, int shift, int rows) {
+    this.symbol = symbol;
+    this.shift = shift;
+    this.rows = rows;
+  }
+  void printSymbols(int cols, char symbol) {
+    for (int i = 0; i < cols; i++) {
+      System.out.print(symbol);
+    }
+  }
+  void printSpaces(int cols) {
+    for (int i = 0; i < cols; i++) {
+      System.out.print(" ");
+    }
+  }
+}
+abstract class Triangle extends SimpleShape {
+  Triangle(char symbol, int shift, int rows){
+    super(symbol, shift, rows);
+  }
+}
+class BottomLeftAngledTriangle extends Triangle{
+  BottomLeftAngledTriangle(char symbol, int shift, int rows){
+    super(symbol, shift, rows);
+  }
+  @Override
+  public void createShape() {
+    for(int row = 0; row < this.rows; row++) {
+      printSpaces(shift);
+      printSymbols(row + 1, symbol);
+      System.out.println();
+    }
+  }
+}
+class TopLeftAngledTriangle extends Triangle{
+  TopLeftAngledTriangle(char symbol, int shift, int rows){
+    super(symbol, shift, rows);
+  }
+  @Override
+  public void createShape() {
+    for(int row = 0; row < this.rows; row++) {
+      printSpaces(shift);
+      printSymbols(rows - row, symbol);
+      System.out.println();
+    }
+  }
+}
+class BottomRightAngledTriangle extends Triangle{
+  BottomRightAngledTriangle(char symbol, int shift, int rows){
+    super(symbol, shift, rows);
+  }
+  @Override
+  public void createShape() {
+    for(int row = 0; row < this.rows; row++) {
+      printSpaces(shift + rows -(row + 1));
+      printSymbols(row + 1, symbol);
+      System.out.println();
+    }
+  }
+}
+class TopRightAngledTriangle extends Triangle{
+  TopRightAngledTriangle(char symbol, int shift, int rows){
+    super(symbol, shift, rows);
+  }
+  @Override
+  public void createShape() {
+    for(int row = 0; row < this.rows; row++) {
+      printSpaces(shift + row);
+      printSymbols(rows - row, symbol);
+      System.out.println();
+    }
+  }
+}
+abstract class Fourangle extends SimpleShape {
+    int width;
+
+    public Fourangle(char symbol, int shift, int rows, int width) {
+        super(symbol, shift, rows);
+        this.width = width;
+    }
+}
+
+class Rectangle extends Fourangle {
+    public Rectangle(char symbol, int shift, int rows, int width) {
+        super(symbol, shift, rows, width);
+    }
+    @Override
+    public void createShape() {
+      for(int row = 0; row < rows; row ++) {
+        printSpaces(shift);
+        printSymbols(width, symbol);
+        System.out.println();
+      }
+    }
+}
+
+class HorizontalTrapezoid extends Fourangle {
+    public HorizontalTrapezoid(char symbol, int shift, int rows, int width) {
+        super(symbol, shift, rows, width);
+    }
+    @Override
+    public void createShape() {
+      for (int row = 0; row < rows; row++) {
+          printSpaces(shift + rows - (row + 1));
+          printSymbols(row * 2 + width, symbol);
+          System.out.println();
+        }
+    }
+}

@@ -1,0 +1,61 @@
+import java.io.*;
+import java.util.regex.*;
+
+public class Dispacher {
+	public static void main(String[] args) {
+		String inputPath = "InputFiles/input.txt";
+		String outputPath = "OutputFiles/filteredOutput.txt";
+		int length = 4;
+		Pattern pattern = Pattern.compile("\\b[qwrtpsdfghjklzxcvbnmQWRTPSDFGHJKLZXCVBNM]\\w{" + (length-1) + "}\\b");
+		Controller.filterText(inputPath, outputPath, pattern);
+	}
+}
+
+class Controller{
+	static void filterText(String inputPath, String outputPath, Pattern pattern) {
+		File inputFile = new File(inputPath);
+		try {
+			outputDirectoryCheck(outputPath);
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+		
+		try(BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+			PrintWriter outputWriter = new PrintWriter(new BufferedWriter(new FileWriter(outputPath)))) {
+				
+			String line;
+			int currentIndex;
+			Matcher matcher;
+			while((line = reader.readLine()) != null) {
+				if (line.isEmpty()) {
+					outputWriter.println();
+				    continue;
+				}
+				currentIndex = 0;
+				matcher = pattern.matcher(line);
+				while(matcher.find()) {
+					outputWriter.print(line.substring(currentIndex, matcher.start()));
+					currentIndex = matcher.end();
+					//System.out.println(matcher.group());
+				}
+				if (currentIndex < line.length()) {
+			        outputWriter.print(line.substring(currentIndex));
+				}
+				outputWriter.println();
+			}
+		}catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	static void outputDirectoryCheck(String outputPath) throws IOException {
+		File outputDirectory = new File(outputPath).getParentFile();
+		if (!outputDirectory.exists()) {
+            boolean created = outputDirectory.mkdirs();
+            if (!created) {
+            	IOException e = new IOException("Unable to create directory - " + outputDirectory.getAbsolutePath());
+                throw e;
+            }
+		}
+	}
+}

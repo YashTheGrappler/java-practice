@@ -1,0 +1,44 @@
+package learning;
+
+import java.util.*;
+import java.util.stream.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		Integer[] array1 = {1, -1, 2, -2, 0, 8, -3, 3, 4, -4, 5, -5};
+		Integer[] array2 = {6, -6, 7, -7, 8, -7};
+		
+		List<Integer> al = Stream.concat(Arrays.stream(array1), Arrays.stream(array2))
+				.collect(() -> new ArrayList<>(),
+						(list, num) -> list.add(num),
+						(list1, list2) -> list1.addAll(list2));
+		System.out.println(al);
+		
+		double arithmeticMean = (double)al.stream().reduce(Integer::sum).get() / al.size();
+		int numGreaterThanArithmeticMean = (int)al.stream().filter((num) -> num > arithmeticMean).count();
+		System.out.println(numGreaterThanArithmeticMean);
+		
+		int min = al.stream().min(Integer::compareTo).get();
+		int max = al.stream().max(Integer::compareTo).get();
+		boolean[] flags = new boolean[2];
+		al = al.stream().filter((num) -> {
+			if(num == min) {
+				if(!flags[0]) {
+					flags[0] = true;
+					return true;
+				}
+				return false;
+			}
+			else if(num == max) {
+				if(!flags[1]) {
+					flags[1] = true;
+					return true;
+				}
+				return false;
+			}else {
+				return true;
+			}
+		}).collect(Collectors.toList());
+		System.out.println(al);
+	}
+}

@@ -1,0 +1,64 @@
+package learning;
+
+import java.util.*;
+import java.util.stream.*;
+
+public class Dispatcher {
+	public static void main(String[] args) {
+		List<Integer> numbers = Arrays.asList(1, -1, 2, -2, 0, 8, -3, 3, 4, -4, 5, -5);
+		String text = "The class String includes methods for examining individual characters of the sequence, "
+				+ "for comparing strings, for searching string, for extracting substrings, "
+				+ "and for creating a copy of a string with all characters translated to uppercase or to lowercase. "
+				+ "Case mapping is based on the Unicode Standard version specified by the Character class.";
+		
+		IntSummaryStatistics stats = numbers.stream()
+			    .collect(Collectors.summarizingInt(Integer::intValue));
+		int min = stats.getMin(); int max = stats.getMax();
+		
+///////////////////////////////////////////////////////////////////////////////////////////////////////////		
+		
+		List<Integer> swapped = numbers.stream()
+									   .collect(ArrayList::new,
+											    (al, num) -> {if(num == min) al.add(max);
+											    			  else if(num == max) al.add(min);
+											    			  else al.add(num);},
+											    ArrayList::addAll);
+		System.out.println(swapped);
+		
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		double average = stats.getAverage();
+		List<Integer> greaterThatAverage = numbers.stream()
+												  .collect(ArrayList::new,
+														   (al, num) -> {if(num > average) al.add(num);},
+														   ArrayList::addAll);
+		System.out.println(greaterThatAverage);
+		
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		int[] sentence = {0};
+		Map <Integer, Integer> differenceBetweenNumberOfVowelsAndConsonants =
+				Arrays.stream(text.split(" "))
+					  .collect(Collectors.groupingBy(word -> word.charAt(word.length() - 1) == '.'? sentence[0]++ : sentence[0],
+							                         Collector.of(() -> new int[2],
+							                        		      (vowelsAndConsonants, word) -> {
+							                        		    	  for(char character : word.toCharArray()) {
+							                        		    		  if(character == 'e' || character == 'a' || character == 'i' ||
+							                        		    		     character == 'o' || character == 'u' || character == 'E' ||
+							                        		    		     character == 'A' || character == 'I' || character == 'O' ||
+							                        		    		     character == 'U') {
+							                        		    			  vowelsAndConsonants[0]++;
+							                        		    		  }else if(Character.isAlphabetic(character)) {
+							                        		    			  vowelsAndConsonants[1]++;
+							                        		    		  }
+							                        		    	  }
+							                        		      },
+							                        		      (array1, array2) -> {
+							                                          array1[0] += array2[0];
+							                                          array1[1] += array2[1];
+							                                          return array1;
+							                                      },
+							                        		      (vowelsAndConsonants) -> vowelsAndConsonants[1] - vowelsAndConsonants[0])));
+		System.out.println(differenceBetweenNumberOfVowelsAndConsonants);
+	}
+}
